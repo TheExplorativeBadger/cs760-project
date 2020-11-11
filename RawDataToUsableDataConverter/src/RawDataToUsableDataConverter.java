@@ -45,7 +45,7 @@ public class RawDataToUsableDataConverter {
     public static void removeUnwantedFeatureValues() {
         try {
 
-            BufferedReader csvReader = new BufferedReader(new FileReader("src/StartingFiles/FeaturesToKeep.csv"));
+            BufferedReader csvReader = new BufferedReader(new FileReader("RawDataToUsableDataConverter/src/StartingFiles/FeaturesToKeep.csv"));
             Set<Integer> wantedFeatures = new HashSet<>();
             String curLine = "";
             while ((curLine = csvReader.readLine()) != null) {
@@ -55,8 +55,8 @@ public class RawDataToUsableDataConverter {
             }
             csvReader.close();
 
-            csvReader = new BufferedReader(new FileReader("src/StartingFiles/RawCountyDemographics.csv"));
-            FileWriter csvWriter = new FileWriter("src/FinalFeatureVectors.csv");
+            csvReader = new BufferedReader(new FileReader("RawDataToUsableDataConverter/src/StartingFiles/RawCountyDemographics.csv"));
+            FileWriter csvWriter = new FileWriter("RawDataToUsableDataConverter/src/FinalFeatureVectors.csv");
             curLine = "";
             String firstLine = csvReader.readLine();
             while ((curLine = csvReader.readLine()) != null) {
@@ -110,8 +110,8 @@ public class RawDataToUsableDataConverter {
 
     public static void modifyDataFileFormat() {
         try {
-            BufferedReader csvReader = new BufferedReader(new FileReader("src/StartingFiles/CovidFileWithDates.csv"));
-            FileWriter csvWriter = new FileWriter("src/CovidFileWithModifiedDates.csv");
+            BufferedReader csvReader = new BufferedReader(new FileReader("RawDataToUsableDataConverter/src/StartingFiles/CovidFileWithDates.csv"));
+            FileWriter csvWriter = new FileWriter("RawDataToUsableDataConverter/src/CovidFileWithModifiedDates.csv");
 
             SimpleDateFormat format = new SimpleDateFormat("yyyy-MM-dd");
             Date day0 = format.parse ( "2020-01-21" );
@@ -156,7 +156,7 @@ public class RawDataToUsableDataConverter {
 
     public static Set<Integer> separateDataByCounties() {
         try {
-            BufferedReader csvReader = new BufferedReader(new FileReader("src/CovidFileWithModifiedDates.csv"));
+            BufferedReader csvReader = new BufferedReader(new FileReader("RawDataToUsableDataConverter/src/CovidFileWithModifiedDates.csv"));
 
             // Q: Which data structure to use as mapping?
             // We are mapping Integer (county#) to a collection of its corresponding data points
@@ -186,7 +186,7 @@ public class RawDataToUsableDataConverter {
             // What to do?
             // Convert the cumulative to daily increase
             for (Integer county : countiesBeingTracked) {
-                FileWriter csvWriter = new FileWriter("src/TimeSeries/" + county.toString() + ".csv");
+                FileWriter csvWriter = new FileWriter("RawDataToUsableDataConverter/src/TimeSeries/" + county.toString() + ".csv");
                 List<String> curCountyTimeSeries = byCountyFiles.get(county);
                 // System.out.println(curCountyTimeSeries.size());
                 int prevCases = 0;
@@ -246,7 +246,7 @@ public class RawDataToUsableDataConverter {
             List<String> resultList = new ArrayList<>();
 
             for (Integer curCountyNumber: countyNumbers) {
-                BufferedReader csvReader = new BufferedReader(new FileReader("src/TimeSeries/" + curCountyNumber + ".csv"));
+                BufferedReader csvReader = new BufferedReader(new FileReader("RawDataToUsableDataConverter/src/TimeSeries/" + curCountyNumber + ".csv"));
 
                 double severityIndex = 0.00;
                 String curLine = "";
@@ -273,7 +273,7 @@ public class RawDataToUsableDataConverter {
                 resultList.add(curResponseEntry);
             }
 
-            FileWriter csvWriter = new FileWriter("src/CovidSeverityIndices.csv");
+            FileWriter csvWriter = new FileWriter("RawDataToUsableDataConverter/src/CovidSeverityIndices.csv");
             for (String response: resultList) {
                 csvWriter.append(response);
             }
@@ -300,7 +300,7 @@ public class RawDataToUsableDataConverter {
 
     public static void combineFeaturesWithSeverityIndex() {
         try {
-            BufferedReader csvReader = new BufferedReader(new FileReader("src/FinalFeatureVectors.csv"));
+            BufferedReader csvReader = new BufferedReader(new FileReader("RawDataToUsableDataConverter/src/FinalFeatureVectors.csv"));
             Map<Integer, String> countyDemographicsMap = new HashMap<>();
             String curLine = "";
             while ((curLine = csvReader.readLine()) != null) {
@@ -310,7 +310,7 @@ public class RawDataToUsableDataConverter {
             }
             csvReader.close();
 
-            csvReader = new BufferedReader(new FileReader("src/CovidSeverityIndices.csv"));
+            csvReader = new BufferedReader(new FileReader("RawDataToUsableDataConverter/src/CovidSeverityIndices.csv"));
             Map<Integer, Double> countyCovidSeverityMap = new HashMap<>();
             List<Integer> countyNumberList = new ArrayList<>();
             curLine = "";
@@ -322,7 +322,7 @@ public class RawDataToUsableDataConverter {
             }
             csvReader.close();
 
-            FileWriter csvWriter = new FileWriter("src/FinalCombinedFeaturesWithSeverity.csv");
+            FileWriter csvWriter = new FileWriter("RawDataToUsableDataConverter/src/FinalCombinedFeaturesWithSeverity.csv");
 
             for (Integer countyNumber: countyNumberList) {
                 double curCountySeverityIndex = countyCovidSeverityMap.get(countyNumber);
