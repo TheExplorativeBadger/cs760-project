@@ -69,8 +69,8 @@ public class RawDataToUsableDataConverter {
                         // We want to add the remaining fields to
                         stringBuilder += ";" + data[i].trim();
                         if (data[i].trim().equals("")) {
-                            //addVector = false;
-                            // This condition would eliminate all but 800ish records :/
+                            addVector = false;
+                            // Comment the above line if you wish to allow samples with empty data
                         }
                     } else {
                         // Do nothing, we do not want these fields in the matrix
