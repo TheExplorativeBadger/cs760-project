@@ -59,6 +59,7 @@ public class RawDataToUsableDataConverter {
             FileWriter csvWriter = new FileWriter("RawDataToUsableDataConverter/src/FinalFeatureVectors.csv");
             curLine = "";
             String firstLine = csvReader.readLine();
+            //Set<Integer> missingSet = new HashSet<>();
             while ((curLine = csvReader.readLine()) != null) {
                 String[] data = curLine.split(";");
                 boolean addVector = true;
@@ -69,6 +70,8 @@ public class RawDataToUsableDataConverter {
                         // We want to add the remaining fields to
                         stringBuilder += ";" + data[i].trim();
                         if (data[i].trim().equals("")) {
+                            //missingSet.add(i);
+                            //System.out.println(i);
                             addVector = false;
                             // Comment the above line if you wish to allow samples with empty data
                         }
@@ -84,6 +87,9 @@ public class RawDataToUsableDataConverter {
             csvReader.close();
             csvWriter.flush();
             csvWriter.close();
+
+            //System.out.println("Missing Features:");
+            //System.out.println(missingSet.toString());
 
         } catch (IOException d) {
             d.printStackTrace();
