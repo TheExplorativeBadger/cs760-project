@@ -1,5 +1,5 @@
 # cs760-project
-A repository to store code related to the CS760 ML Final Project that Jason and I are working on.
+A repository to store code related to the CS760 ML Final Project that Jason, Samantha, and I are working on.
 
 ## Sub-Directories
 1. RawDataToUsableDataConverter 
