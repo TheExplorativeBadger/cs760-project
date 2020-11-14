@@ -22,9 +22,3 @@ After processing these files, the program will produce a number of intermediary 
 
 This file will be what gets carried on to the other steps of our project to perform various ML algorithms on it. Think of this file
 as the equivalent of what we begin with when looking at the Titanic Data sets.
-
-NOTE: All Intermediary files outside of /StartingFiles, as well as the entire /TimeSeries directory should be deleted after each run.
-Additionally, a fresh src/TimeSeries directory needs to be created before each time you run this program.
-
-
-
