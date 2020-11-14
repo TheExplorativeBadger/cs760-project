@@ -1,7 +1,5 @@
-import java.io.BufferedReader;
-import java.io.FileReader;
-import java.io.FileWriter;
-import java.io.IOException;
+import java.io.*;
+import java.lang.reflect.Array;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.*;
@@ -14,10 +12,9 @@ public class RawDataToUsableDataConverter {
 
         // Transform the responses into severity indices
         transformResponseDate();
-        // Todo: Figure out an equation / way to turn the data into a severity index
 
         // Match the transformed feature vectors with their corresponding severity index, create 1 csv
-        combineFeaturesWithSeverityIndex();
+        combineFeatureVectorAndResponseData();
 
         // Use this file in Matlab to perform Linear Regression.
     }
@@ -42,6 +39,8 @@ public class RawDataToUsableDataConverter {
 
     }
 
+    private static Map<Integer, Integer> countyPopulations;
+
     public static void removeUnwantedFeatureValues() {
         try {
 
@@ -56,14 +55,25 @@ public class RawDataToUsableDataConverter {
             csvReader.close();
 
             csvReader = new BufferedReader(new FileReader("RawDataToUsableDataConverter/src/StartingFiles/RawCountyDemographics.csv"));
+
+            File fileName = new File("RawDataToUsableDataConverter/src/FinalFeatureVectors.csv");
+            if (fileName.exists()) {
+                fileName.delete();
+            }
+
+            countyPopulations = new HashMap<>();
+
             FileWriter csvWriter = new FileWriter("RawDataToUsableDataConverter/src/FinalFeatureVectors.csv");
             curLine = "";
             String firstLine = csvReader.readLine();
             //Set<Integer> missingSet = new HashSet<>();
             while ((curLine = csvReader.readLine()) != null) {
                 String[] data = curLine.split(";");
+
                 boolean addVector = true;
                 String stringBuilder = data[2];
+                int population = Integer.parseInt(data[32]);
+                int countyNumber = Integer.parseInt(data[2]);
                 // Remove indices 0, 1, 3, 107, 108, 147
                 for (int i = 0; i < data.length; i ++) {
                     if (wantedFeatures.contains(i) && i != 2) {
@@ -82,6 +92,7 @@ public class RawDataToUsableDataConverter {
                 stringBuilder += "\n";
                 if (addVector) {
                     csvWriter.append(stringBuilder);
+                    countyPopulations.put(countyNumber, population);
                 }
             }
             csvReader.close();
@@ -109,9 +120,22 @@ public class RawDataToUsableDataConverter {
      */
 
     public static void transformResponseDate() {
+        setupTempDirectoryStructure();
         modifyDataFileFormat();
         Set<Integer> countyNumbers = separateDataByCounties();
         calculateSeverityIndices(countyNumbers);
+        tearDownTempDirectoryStructure(countyNumbers);
+    }
+
+    private static void setupTempDirectoryStructure() {
+
+        String directoryName = "RawDataToUsableDataConverter/src/TimeSeries";
+        File directory = new File(directoryName);
+        if (! directory.exists()){
+            directory.mkdir();
+            // If you require it to make the entire directory path including parents,
+            // use directory.mkdirs(); here instead.
+        }
     }
 
     public static void modifyDataFileFormat() {
@@ -174,6 +198,7 @@ public class RawDataToUsableDataConverter {
                 String[] data = curLine.split(",");
 
                 Integer countyNumber = Integer.parseInt(data[1]);
+                Integer countyPopulation = 0;
 
                 // Using the county number, add the curLine into the ArrayList at that key
                 if (byCountyFiles.containsKey(countyNumber)) {
@@ -244,48 +269,192 @@ public class RawDataToUsableDataConverter {
         return null;
     }
 
-    // Todo: Figure out an equation / way to turn the data into a severity index
     public static void calculateSeverityIndices(Set<Integer> countyNumbers) {
         try {
-
             // Keep track of the severity indices in a data structure here, going to print after everything done
             List<String> resultList = new ArrayList<>();
+            Map<Integer, ArrayList<Double>> totalCasesPerCapita = new HashMap<>();
+            Set<Integer> weekNumberSet = new HashSet<>();
 
             for (Integer curCountyNumber: countyNumbers) {
-                BufferedReader csvReader = new BufferedReader(new FileReader("RawDataToUsableDataConverter/src/TimeSeries/" + curCountyNumber + ".csv"));
+                List<WeeklyDataPoint> weeklyCasesPerCapita = getWeeklyCasesPerCapitaList(curCountyNumber);
+                // Go through all counties and add their cases/capita value to the list indexed by their week number
+                if (weeklyCasesPerCapita != null) {
+                    for (WeeklyDataPoint curWeekData : weeklyCasesPerCapita) {
+                        int curWeekNumber = curWeekData.getWeekNumber();
+                        double curCasesPerCapita = curWeekData.getCasesPerCapita();
 
-                double severityIndex = 0.00;
-                String curLine = "";
-                while ((curLine = csvReader.readLine()) != null) {
-                    String[] data = curLine.split(",");
-
-                    int curDay = Integer.parseInt(data[0]);
-                    int countyNum = Integer.parseInt(data[1]);
-                    int deltaCases = Integer.parseInt(data[2]);
-                    int totalCases = Integer.parseInt(data[3]);
-                    int deltaDeaths = Integer.parseInt(data[4]);
-                    int totalDeaths = Integer.parseInt(data[5]);
-
-                    /**
-                     * TODO: Need to implement a function to calculate severity here
-                     */
-
-                    severityIndex = 1;
-
+                        if (!totalCasesPerCapita.containsKey(curWeekNumber)) {
+                            ArrayList<Double> newWeekList = new ArrayList<>();
+                            newWeekList.add(curCasesPerCapita);
+                            totalCasesPerCapita.put(curWeekNumber, newWeekList);
+                            weekNumberSet.add(curWeekNumber);
+                        } else {
+                            ArrayList<Double> existingWeekList = totalCasesPerCapita.get((curWeekNumber));
+                            existingWeekList.add(curCasesPerCapita);
+                            totalCasesPerCapita.replace(curWeekNumber, existingWeekList);
+                        }
+                    }
                 }
-                csvReader.close();
-
-                String curResponseEntry = curCountyNumber + "," + severityIndex + "\n";
-                resultList.add(curResponseEntry);
             }
 
+            Map<Integer, Double> weeklyMeans = new HashMap<>();
+            Map<Integer, Double> weeklyVariances = new HashMap<>();
+
+            // 1. Sum all the values for a particular week
+            // 2. Determine the Mean
+            // 3. Determine the Variance
+
+            // For Each Week
+            for (Integer week : weekNumberSet) {
+                ArrayList<Double> curWeekDataPoints = totalCasesPerCapita.get(week);
+                if (curWeekDataPoints != null) { // defense
+                    int numCounties = curWeekDataPoints.size();
+
+                    // 1. Sum all the values for a particular week
+                    // 2. Determine the Mean
+                    double meanSum = 0;
+                    for (Double curData : curWeekDataPoints) {
+                        meanSum += curData;
+                    }
+                    double mean = meanSum / numCounties;
+                    if (!weeklyMeans.containsKey(week)) {
+                        weeklyMeans.put(week, mean);
+                    } else {
+
+                    }
+
+                    // 3. Determine the Variance
+                    double varianceSum = 0;
+                    for (Double curDate : curWeekDataPoints) {
+                        double curVariance = Math.pow((curDate - mean), 2.00);
+                        varianceSum += curVariance;
+                    }
+                    double variance = varianceSum / numCounties;
+                    if (!weeklyVariances.containsKey(week)) {
+                        weeklyVariances.put(week, variance);
+                    } else {
+
+                    }
+                }
+            }
+
+            // 4. Go back through each county and determine the number of standard deviations from mean
+            for (Integer curCountyNumber: countyNumbers) {
+                List<WeeklyDataPoint> weeklyCasesPerCapita = getWeeklyCasesPerCapitaList(curCountyNumber);
+                if (weeklyCasesPerCapita != null) {
+                    int totalNumWeeks = weeklyCasesPerCapita.size();
+                    double zScoreSum = 0.00;
+
+                    for (WeeklyDataPoint week : weeklyCasesPerCapita) {
+                        int weekNumber = week.getWeekNumber();
+                        double weeklyMean = weeklyMeans.get(weekNumber);
+                        double weeklyVariance = weeklyVariances.get(weekNumber);
+                        double casesPerCapita = week.getCasesPerCapita();
+
+                        double weeklyZScore = determineZScore(weeklyMean, weeklyVariance, casesPerCapita);
+                        zScoreSum += weeklyZScore;
+                    }
+
+                    double averageZScore = zScoreSum / totalNumWeeks;
+                    resultList.add(curCountyNumber + "," + averageZScore + "\n");
+                }
+            }
+
+            // Check if the file already exists, if so delete so we can create a fresh one
+            File fileName = new File("RawDataToUsableDataConverter/src/CovidSeverityIndices.csv");
+            if (fileName.exists()) {
+                fileName.delete();
+            }
+
+            // Now that we have all the severityIndices, we can create the CovidSeverityIndices.csv file to be used next step
             FileWriter csvWriter = new FileWriter("RawDataToUsableDataConverter/src/CovidSeverityIndices.csv");
             for (String response: resultList) {
                 csvWriter.append(response);
             }
             csvWriter.flush();
             csvWriter.close();
+
         } catch (IOException d) {
+
+        }
+    }
+
+    public static double determineZScore(double mean, double variance, double value) {
+        double numerator = value - mean;
+        double standardDeviation = Math.sqrt(variance);
+        return (numerator / standardDeviation);
+    }
+
+    /**
+     * Returns a list of integers representing the weekly cases / capita for the particular countyNumber
+     * @param countyNumber The county FIPS code that you would like to find the weekly cases / capita
+     * @return A List<Integer> representing weekly cases / capita
+     */
+    public static List<WeeklyDataPoint> getWeeklyCasesPerCapitaList(int countyNumber) {
+        try {
+            BufferedReader csvReader = new BufferedReader(new FileReader("RawDataToUsableDataConverter/src/TimeSeries/" + countyNumber + ".csv"));
+
+            List<WeeklyDataPoint> weeklyCaseDataPoints = new ArrayList<>();
+            double curCountyPopulation = (double) countyPopulations.get(countyNumber);
+
+            int weekCounter = 1;
+            int singleWeekCounter = 0;
+            double singleWeekSum = 0;
+
+            String curLine = "";
+            while ((curLine = csvReader.readLine()) != null) {
+                String[] data = curLine.split(",");
+
+                int curDay = Integer.parseInt(data[0]);
+                int countyNum = Integer.parseInt(data[1]);
+                int deltaCases = Integer.parseInt(data[2]);
+                int totalCases = Integer.parseInt(data[3]);
+                int deltaDeaths = Integer.parseInt(data[4]);
+                int totalDeaths = Integer.parseInt(data[5]);
+
+                singleWeekSum += deltaCases;
+                singleWeekCounter += 1;
+
+                if (singleWeekCounter == 7) {
+                    WeeklyDataPoint newDataPoint = new WeeklyDataPoint();
+                    newDataPoint.setCountyNumber(countyNumber);
+                    newDataPoint.setCountyPopulation((int) curCountyPopulation);
+                    newDataPoint.setCasesPerCapita(singleWeekSum / curCountyPopulation);
+                    newDataPoint.setWeekNumber(weekCounter);
+
+                    weeklyCaseDataPoints.add(newDataPoint);
+
+                    weekCounter += 1;
+                    singleWeekSum = 0;
+                    singleWeekCounter = 0;
+                }
+            }
+            csvReader.close();
+
+            if (singleWeekCounter != 0) {
+                WeeklyDataPoint newDataPoint = new WeeklyDataPoint();
+                newDataPoint.setCountyNumber(countyNumber);
+                newDataPoint.setCountyPopulation((int) curCountyPopulation);
+                newDataPoint.setCasesPerCapita(singleWeekSum / curCountyPopulation);
+                newDataPoint.setWeekNumber(weekCounter);
+            }
+
+            return weeklyCaseDataPoints;
+        } catch (NullPointerException | IOException d) {
+            return null;
+        }
+    }
+
+    private static void tearDownTempDirectoryStructure(Set<Integer> countyNumbers) {
+        try {
+            for (Integer county : countyNumbers) {
+                File currentFile = new File("RawDataToUsableDataConverter/src/TimeSeries/" + county + ".csv");
+                currentFile.delete();
+            }
+            File directory = new File("RawDataToUsableDataConverter/src/TimeSeries");
+            directory.delete();
+        } catch (Exception e) {
 
         }
     }
@@ -303,6 +472,11 @@ public class RawDataToUsableDataConverter {
      * Linear Regression algorithms
      *******************************************************
      */
+
+    public static void combineFeatureVectorAndResponseData() {
+        combineFeaturesWithSeverityIndex();
+        deleteIntermediateFiles();
+    }
 
     public static void combineFeaturesWithSeverityIndex() {
         try {
@@ -328,6 +502,11 @@ public class RawDataToUsableDataConverter {
             }
             csvReader.close();
 
+            File fileName = new File("RawDataToUsableDataConverter/src/FinalCombinedFeaturesWithSeverity.csv");
+            if (fileName.exists()) {
+                fileName.delete();
+            }
+
             FileWriter csvWriter = new FileWriter("RawDataToUsableDataConverter/src/FinalCombinedFeaturesWithSeverity.csv");
 
             for (Integer countyNumber: countyNumberList) {
@@ -347,6 +526,15 @@ public class RawDataToUsableDataConverter {
 
         } catch (IOException d) {
             d.printStackTrace();
+        }
+    }
+
+    private static void deleteIntermediateFiles() {
+        try {
+            File intermediateFile = new File("RawDataToUsableDataConverter/src/CovidFileWithModifiedDates.csv");
+            intermediateFile.delete();
+        } catch (Exception e) {
+
         }
     }
 
