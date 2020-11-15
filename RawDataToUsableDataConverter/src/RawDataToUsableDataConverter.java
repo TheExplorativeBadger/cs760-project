@@ -380,12 +380,6 @@ public class RawDataToUsableDataConverter {
         }
     }
 
-    public static double determineZScore(double mean, double variance, double value) {
-        double numerator = value - mean;
-        double standardDeviation = Math.sqrt(variance);
-        return (numerator / standardDeviation);
-    }
-
     /**
      * Returns a list of integers representing the weekly cases / capita for the particular countyNumber
      * @param countyNumber The county FIPS code that you would like to find the weekly cases / capita
@@ -444,6 +438,12 @@ public class RawDataToUsableDataConverter {
         } catch (NullPointerException | IOException d) {
             return null;
         }
+    }
+
+    public static double determineZScore(double mean, double variance, double value) {
+        double numerator = value - mean;
+        double standardDeviation = Math.sqrt(variance);
+        return (numerator / standardDeviation);
     }
 
     private static void tearDownTempDirectoryStructure(Set<Integer> countyNumbers) {
@@ -512,11 +512,13 @@ public class RawDataToUsableDataConverter {
             for (Integer countyNumber: countyNumberList) {
                 double curCountySeverityIndex = countyCovidSeverityMap.get(countyNumber);
                 String curCountyFeatureVector = countyDemographicsMap.get(countyNumber);
+                String modifiedCurCountyFeatureVector = curCountyFeatureVector.replaceFirst("[0-9]+;", "");
 
                 if (curCountyFeatureVector != null) {
                     csvWriter.append(String.valueOf(curCountySeverityIndex));
                     csvWriter.append(";");
-                    csvWriter.append(curCountyFeatureVector);
+                    //csvWriter.append(curCountyFeatureVector);
+                    csvWriter.append(modifiedCurCountyFeatureVector);
                     csvWriter.append("\n");
                 }
 
