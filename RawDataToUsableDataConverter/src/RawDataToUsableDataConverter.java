@@ -176,8 +176,10 @@ public class RawDataToUsableDataConverter {
             String firstLine = csvReader.readLine();
             while ((curLine = csvReader.readLine()) != null) {
                 String[] data = curLine.split(",");
-
-                if (data[0].trim().equals("") ||
+                System.out.println(curLine);
+                if (data.length < 6) {
+                    continue;
+                } else if (data[0].trim().equals("") ||
                         data[3].trim().equals("") ||
                         data[4].trim().equals("") ||
                         data[5].trim().equals("")) {
@@ -185,7 +187,7 @@ public class RawDataToUsableDataConverter {
                     continue;
                 }
 
-                Date curDate = format.parse (data[0]);
+                Date curDate = format.parse(data[0]);
                 long curDateTime = curDate.getTime();
 
                 long timeBetween = curDateTime - day0Time;
