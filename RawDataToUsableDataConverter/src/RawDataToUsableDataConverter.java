@@ -54,6 +54,22 @@ public class RawDataToUsableDataConverter {
             }
             csvReader.close();
 
+            // Load in all the populations based on census files
+            Map<Integer, Integer> rawCountyPopulations = new HashMap<>();
+            csvReader = new BufferedReader(new FileReader("RawDataToUsableDataConverter/src/StartingFiles/CensusCountyPopulations.csv"));
+            String curCountyPopulationLine = "";
+            String firstCountyPopulationLine = csvReader.readLine();
+            while ((curCountyPopulationLine = csvReader.readLine()) != null) {
+                String[] data = curCountyPopulationLine.split(",");
+                String stateCode = data[3];
+                String countyCode = data[4];
+                int fips = Integer.parseInt(stateCode + countyCode);
+                int countyPopulation = Integer.parseInt(data[18]);
+                rawCountyPopulations.put(fips, countyPopulation);
+            }
+            csvReader.close();
+
+            // Read in the demographics for each of the counties in the demographics file
             csvReader = new BufferedReader(new FileReader("RawDataToUsableDataConverter/src/StartingFiles/RawCountyDemographics.csv"));
 
             File fileName = new File("RawDataToUsableDataConverter/src/FinalFeatureVectors.csv");
@@ -77,13 +93,21 @@ public class RawDataToUsableDataConverter {
                 // Remove indices 0, 1, 3, 107, 108, 147
                 for (int i = 0; i < data.length; i ++) {
                     if (wantedFeatures.contains(i) && i != 2) {
-                        // We want to add the remaining fields to
-                        stringBuilder += ";" + data[i].trim();
-                        if (data[i].trim().equals("")) {
-                            //missingSet.add(i);
-                            //System.out.println(i);
-                            addVector = false;
-                            // Comment the above line if you wish to allow samples with empty data
+                        if (i == 32) {
+                            if (rawCountyPopulations.get(countyNumber) == null) {
+                                addVector = false;
+                            } else {
+                                stringBuilder += ";" + rawCountyPopulations.get(countyNumber);
+                            }
+                        } else {
+                            // We want to add the remaining fields to
+                            stringBuilder += ";" + data[i].trim();
+                            if (data[i].trim().equals("")) {
+                                //missingSet.add(i);
+                                //System.out.println(i);
+                                addVector = false;
+                                // Comment the above line if you wish to allow samples with empty data
+                            }
                         }
                     } else {
                         // Do nothing, we do not want these fields in the matrix
@@ -92,7 +116,8 @@ public class RawDataToUsableDataConverter {
                 stringBuilder += "\n";
                 if (addVector) {
                     csvWriter.append(stringBuilder);
-                    countyPopulations.put(countyNumber, population);
+//                    countyPopulations.put(countyNumber, population);
+                    countyPopulations.put(countyNumber, rawCountyPopulations.get(countyNumber));
                 }
             }
             csvReader.close();
