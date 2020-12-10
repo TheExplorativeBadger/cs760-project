@@ -15,15 +15,17 @@ Num_Columns_X = Dimensions_X(2);
 %%% Find MLE Theta  %%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % This is the MLE(Theta) of Homoskedastic
-Theta_Hat = inv((X' * X)) * X' * y;
+Theta_Hat = inv(X' * X) * X' * y;
+
+% This is the MLE(Sigma) of Homoskedastic
+sigma_squared = 1/Num_Rows_X * (y - X * Theta_Hat)' * (y - X * Theta_Hat);
 
 % This is the MLE(Sigma) of Heteroskedastic
 Sigma_Hat = (y - X * Theta_Hat) * (y - X * Theta_Hat)';
 
 %%% Iterative Heteroskedastic MLE %%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-NumberIterations = 1000;
-
+% NumberIterations = 1000;
 % % Iterative Heteroskedastic Approach
 % Theta_Hat_Iterative = zeros(Dimensions_X(2), 1);
 % Sigma_Hat_Iterative = eye(Dimensions_y(1));
@@ -37,31 +39,31 @@ NumberIterations = 1000;
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 % New Sample Details
-x_New = [1; 1; 1; 1; 1; 1; 1; 1; 1; 1; 1; 1; 1; 1; 1; 1; 1; 1; 1; 1; 1; 1; 1; 1; 1; 1; 1; 1;];
-num_samples = 1;
+% x_New = [1; 1; 1; 1; 1; 1; 1; 1; 1; 1; 1; 1; 1; 1; 1; 1; 1; 1; 1; 1; 1; 1; 1; 1; 1; 1; 1; 1;];
+% num_samples = 1;
 
 % Set the threshold to 0.05, find the z_score
 alpha = 0.05;
-z_score = abs(norminv(alpha/2));
+% z_score = abs(norminv(alpha/2));
 
 %%% Predict the Responses %%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 % Find the new estimated response MLE
-y_Hat = x_New' * Theta_Hat;
+% y_Hat = x_New' * Theta_Hat;
 % y_Hat_Hetero = x_New' * Theta_Hat_Iterative;
 
 %%% Homoskedastic Confidence Interval %%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-sigma_squared = 1/Num_Rows_X * (y - X * Theta_Hat)' * (y - X * Theta_Hat);
-variance_homo = sigma_squared * x_New' * inv(X' * X) * x_New;
-std_dev_homo = sqrt(variance_homo);
 
-tau_Homo = z_score * (std_dev_homo / sqrt(num_samples));
-
-confidence_upper_homo = y_Hat + z_score * (std_dev_homo / sqrt(num_samples));
-confidence_lower_homo = y_Hat - z_score * (std_dev_homo / sqrt(num_samples));
-Confidence_Interval_Homoskedastic = [confidence_lower_homo, confidence_upper_homo];
+% variance_homo = sigma_squared * x_New' * inv(X' * X) * x_New;
+% std_dev_homo = sqrt(variance_homo);
+% 
+% tau_Homo = z_score * (std_dev_homo / sqrt(num_samples));
+% 
+% confidence_upper_homo = y_Hat + z_score * (std_dev_homo / sqrt(num_samples));
+% confidence_lower_homo = y_Hat - z_score * (std_dev_homo / sqrt(num_samples));
+% Confidence_Interval_Homoskedastic = [confidence_lower_homo, confidence_upper_homo];
 
 %%% Heteroskedastic Confidence Interval %%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -82,65 +84,53 @@ cov_matrix = sigma_squared * inv(X' * X);
 SignificanceLevels_Homoskedastic = [];
 SignificantFeatureIndices_Homoskedastic = [];
 
-% SignificanceLevels_Heteroskedastic = [];
-% SignificantFeatureIndices_Heteroskedastic = [];
+% Inverse tail of chi squared (alpha = 0.05) = 3.838
+SignificanceThreshold = 3.838;
 
 for significanceLoop = 1:Num_Columns_X
-    curSignificanceLevel = Theta_Hat(significanceLoop) / cov_matrix(significanceLoop, significanceLoop);
+    curSignificanceLevel = Theta_Hat(significanceLoop)^2 / cov_matrix(significanceLoop, significanceLoop);
     SignificanceLevels_Homoskedastic = [SignificanceLevels_Homoskedastic curSignificanceLevel];
 
-    if curSignificanceLevel > tau_Homo
+    if curSignificanceLevel > SignificanceThreshold
         SignificantFeatureIndices_Homoskedastic = [SignificantFeatureIndices_Homoskedastic significanceLoop];
     end
 end
 
-%%% Run 10-Fold Cross Validation to Determine Error % %%%
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%% Run 10 sets of 10-Fold Cross Validation to Determine Error %%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+numIterations = 10;
 
-AverageError = KFoldCrossValidation(10, y, X);
-
-
-function subsets = getKEvenSubsets(K, ResponseVector, OriginalFeatureMatrix)
-
-    NumTotalSamples = size(ResponseVector);
-    intK = int16(K);
-
-    SubsetQuantity = idivide(NumTotalSamples(1), intK,'floor');
-    LeftoverStart = mod(NumTotalSamples(1), intK);
-    LeftoverAdded = 0;
-
-    K_Subsets = {};
-
-    Dimensions_X = size(OriginalFeatureMatrix);
-    Num_Rows_X = Dimensions_X(1);
-
-    for kSubsetsLoop = 1:K
-        CurSubset = [];
-
-        startIndex = (((kSubsetsLoop - 1) * SubsetQuantity) + LeftoverAdded) + 1;
-        stopIndex = startIndex + SubsetQuantity - 1;
-
-
-        if (LeftoverStart - LeftoverAdded) > 0
-            stopIndex = stopIndex + 1;
-            LeftoverAdded = LeftoverAdded + 1;
-        end
-
-        for innerLoop = startIndex:stopIndex
-            curXVector = OriginalFeatureMatrix(innerLoop,:);
-            Cur_y_value = ResponseVector(innerLoop);
-            CurSubset = [CurSubset; curXVector Cur_y_value];
-        end
-
-        K_Subsets{end + 1} = CurSubset;
-    end
-
-    subsets = K_Subsets;
+AverageErrors = [];
+for iterationLoop = 1:numIterations
+    AverageError = KFoldCrossValidation(10, y, X);
+    AverageErrors = [AverageErrors AverageError];
 end
 
+FinalAverageErrorSum = 0;
+for finalAverageLoop = 1:numIterations
+    FinalAverageErrorSum = FinalAverageErrorSum + AverageErrors(1,finalAverageLoop);
+end
+
+FinalAverageError = FinalAverageErrorSum / numIterations;
+
+%%% Clear Unwanted Variables %%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+clear filename;
+clear Dimensions_y;
+clear Dimensions_X;
+clear Num_Rows_X;
+clear Num_Columns_X;
+clear significanceLoop;
+clear curSignificanceLevel;
+clear iterationLoop;
+clear finalAverageLoop;
+clear FinalAverageErrorSum;
+
+%%% Extra Helper Functions %%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 function error = KFoldCrossValidation(K, ResponseVector, OriginalFeatureMatrix)
     % - We are going to split the samples into 10 even subsets
-    KCV_Subsets = getKEvenSubsets(K, ResponseVector, OriginalFeatureMatrix);
+    KCV_Subsets = getKEvenSubsetsRandom(K, ResponseVector, OriginalFeatureMatrix);
 
     Errors = [];
 
@@ -190,7 +180,7 @@ function error = KFoldCrossValidation(K, ResponseVector, OriginalFeatureMatrix)
 
             curTestingSampleResponsePrediction = curTestingSample * Theta_Hat;
 
-            curError = abs(curTestingSampleResponsePrediction - curTestingResponse) / curTestingResponse;
+            curError = abs(curTestingSampleResponsePrediction - curTestingResponse);
             ErrorSum = ErrorSum + curError;
         end
 
@@ -206,4 +196,80 @@ function error = KFoldCrossValidation(K, ResponseVector, OriginalFeatureMatrix)
 
     FinalAverageError = FinalErrorSum / K;
     error = FinalAverageError;
+end
+
+function subsets = getKEvenSubsetsRandom(K, ResponseVector, OriginalFeatureMatrix)
+    
+    NumTotalSamples = size(ResponseVector);
+    intK = int16(K);
+    SubsetQuantity = idivide(NumTotalSamples(1), intK,'floor');
+    LeftoverStart = mod(NumTotalSamples(1), intK);
+    LeftoverAdded = 0;
+    
+    K_Subsets = {};
+    
+    RandomIndexPermutation = randperm(NumTotalSamples(1));
+
+    for numSubsetsLoop = 1:K
+        
+        curSubset = [];
+        
+        startIndex = (((numSubsetsLoop - 1) * SubsetQuantity) + LeftoverAdded) + 1;
+        stopIndex = startIndex + SubsetQuantity - 1;
+        
+        if (LeftoverStart - LeftoverAdded) > 0
+            stopIndex = stopIndex + 1;
+            LeftoverAdded = LeftoverAdded + 1;
+        end
+        
+        for innerLoop = startIndex:stopIndex
+            curRandomIndex = RandomIndexPermutation(1,innerLoop);
+            curXVector = OriginalFeatureMatrix(curRandomIndex,:);
+            Cur_y_value = ResponseVector(curRandomIndex,1);
+            curSubset = [curSubset; curXVector Cur_y_value];
+        end
+        
+        K_Subsets{end + 1} = curSubset;
+        
+    end
+
+    subsets = K_Subsets;
+end
+
+function subsets = getKEvenSubsetsSequential(K, ResponseVector, OriginalFeatureMatrix)
+
+    NumTotalSamples = size(ResponseVector);
+    intK = int16(K);
+
+    SubsetQuantity = idivide(NumTotalSamples(1), intK,'floor');
+    LeftoverStart = mod(NumTotalSamples(1), intK);
+    LeftoverAdded = 0;
+
+    K_Subsets = {};
+
+    Dimensions_X = size(OriginalFeatureMatrix);
+    Num_Rows_X = Dimensions_X(1);
+
+    for kSubsetsLoop = 1:K
+        CurSubset = [];
+
+        startIndex = (((kSubsetsLoop - 1) * SubsetQuantity) + LeftoverAdded) + 1;
+        stopIndex = startIndex + SubsetQuantity - 1;
+
+
+        if (LeftoverStart - LeftoverAdded) > 0
+            stopIndex = stopIndex + 1;
+            LeftoverAdded = LeftoverAdded + 1;
+        end
+
+        for innerLoop = startIndex:stopIndex
+            curXVector = OriginalFeatureMatrix(innerLoop,:);
+            Cur_y_value = ResponseVector(innerLoop);
+            CurSubset = [CurSubset; curXVector Cur_y_value];
+        end
+
+        K_Subsets{end + 1} = CurSubset;
+    end
+
+    subsets = K_Subsets;
 end
