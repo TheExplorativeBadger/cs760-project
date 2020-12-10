@@ -85,7 +85,7 @@ SignificanceLevels_Homoskedastic = [];
 SignificantFeatureIndices_Homoskedastic = [];
 
 % Inverse tail of chi squared (alpha = 0.05) = 3.838
-SignificanceThreshold = 3.838;
+SignificanceThreshold = chi2inv((1-alpha),1);
 
 for significanceLoop = 1:Num_Columns_X
     curSignificanceLevel = Theta_Hat(significanceLoop)^2 / cov_matrix(significanceLoop, significanceLoop);
