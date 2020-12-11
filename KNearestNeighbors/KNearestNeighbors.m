@@ -5,7 +5,6 @@ OriginalFile = dlmread(filename, ';');
 
 % y = covid severity index 
 y = OriginalFile(:,1);
-disp(y);
 Dimensions_y = size(y);
 % X = Demographic-Feature-Matrix
 X = OriginalFile(:,2:end);
@@ -19,45 +18,77 @@ StartingNumNeighbors = 1;
 EndingNumNeighbors = 25;
 NumberFolds = 10;
 
-OptimalNumNeighbors = findOptimalNumberNeighbors(StartingNumNeighbors, EndingNumNeighbors, NumberFolds, y, X);
+% OptimalNumNeighbors = findOptimalNumberNeighbors(StartingNumNeighbors, EndingNumNeighbors, NumberFolds, y, X);
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+NumberNeighbors = [];
+for numNeighborsLoop = StartingNumNeighbors:EndingNumNeighbors
+    NumberNeighbors = [NumberNeighbors numNeighborsLoop];
+end
+disp('Starting the search for Optimal Number of Neighbors');
+ErrorsForValuesOfN = getAverageErrorForEachValueOfN(StartingNumNeighbors, EndingNumNeighbors, NumberFolds, y, X);
+
+Dimensions_Errors = size(ErrorsForValuesOfN);
+lowestError = 1000000;
+lowestErrorNumNeighbors = -1;
+    
+for lowestErrorLoop = 1:Dimensions_Errors(2)
+    if ErrorsForValuesOfN(1,lowestErrorLoop) < lowestError
+        lowestError = ErrorsForValuesOfN(1,lowestErrorLoop);
+        lowestErrorNumNeighbors = NumberNeighbors(1, lowestErrorLoop);
+    end
+end
+OptimalNumNeighbors = lowestErrorNumNeighbors;
+disp('Found the Optimal Number of Neighbors to be:');
+disp(OptimalNumNeighbors);
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
 
 %%% Use the Optimal K (K-NN) Value to Perform 10-Fold Cross Validation %%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 NumberIterations = 10;
 
-AverageErrors = [];
-for iterationLoop = 1:numIterations
-    AverageError = KFoldCrossValidation(NumberFolds, OptimalNumNeighbors, y, X);
-    AverageErrors = [AverageErrors AverageError];
+% AverageErrorPerFold = [];
+% for iterationLoop = 1:NumberIterations
+%     AverageError = KFoldCrossValidation(NumberFolds, OptimalNumNeighbors, y, X);
+%     AverageErrorPerFold = [AverageErrorPerFold AverageError];
+% end
+% 
+% FinalAverageErrorSum = 0;
+% for finalAverageLoop = 1:NumberIterations
+%     FinalAverageErrorSum = FinalAverageErrorSum + AverageErrorPerFold(1,finalAverageLoop);
+% end
+% 
+% FinalAverageError = FinalAverageErrorSum / NumberIterations;
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+disp('Starting 10 Iterations of 10-Fold Cross Validation Using Optimal Number of Neighbors');
+iterationXfoldErrorMatrix = [];
+for iterationLoop = 1:NumberIterations
+    disp('Iteration Number:');
+    disp(iterationLoop);
+    CurIterationErrors = KFoldCrossValidation_Row(NumberFolds, OptimalNumNeighbors, y, X);
+    iterationXfoldErrorMatrix = [iterationXfoldErrorMatrix; CurIterationErrors];
 end
 
-FinalAverageErrorSum = 0;
-for finalAverageLoop = 1:numIterations
-    FinalAverageErrorSum = FinalAverageErrorSum + AverageErrors(1,finalAverageLoop);
-end
+FinalAverageError = FindAverageErrorAcrossAllFolds(iterationXfoldErrorMatrix);
+disp('Final Average Error:');
+disp(FinalAverageError);
 
-FinalAverageError = FinalAverageErrorSum / numIterations;
-
-
-
-
-
-
-
+FinalStandardDeviation = FindErrorStandardDeviationAcrossAllFolds(iterationXfoldErrorMatrix, FinalAverageError);
+disp('Standard Deviation:');
+disp(FinalStandardDeviation);
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 %%% Figure out a way to plot the errors for each value of num neighbors %%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-% scatter(X_Coordinates,OverallResponses);
-% ylim([-0.2,1.2]);
-
-
-
-
-
-
-
-
+% Need to plot the Average error for each value of K on scatter plot
+scatter(NumberNeighbors,ErrorsForValuesOfN,[],[0,0,0],'filled');
+ylim([0,0.35]);
+xlabel('Number of Neighbors');
+ylabel('Average Covid Severity Index Error');
+title('Average Error in Predicted Covid Severity Index For 1 - 25 Neighbors');
 
 
 %%% Clear Unwanted Variables %%%
@@ -66,12 +97,77 @@ clear filename;
 clear Dimensions_y;
 clear Dimensions_X;
 clear Num_Rows_X;
+clear Num_Columns_X;
+clear StartingNumNeighbors;
+clear EndingNumNeighbors;
+clear Dimensions_Errors;
+clear numNeighborsLoop;
+clear lowestError;
+clear lowestErrorNumNeighbors;
+clear lowestErrorLoop
+clear NumberFolds;
+clear NumberIterations;
+clear CurIterationErrors;
 clear iterationLoop;
-clear finalAverageLoop;
-clear FinalAverageErrorSum;
+% clear AverageError;
+% clear finalAverageLoop;
+% clear FinalAverageErrorSum;
 
 %%% Extra Helper Functions %%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+function average = FindAverageErrorAcrossAllFolds(ErrorMatrix)
+    DimensionsErrorMatrix = size(ErrorMatrix);
+    IterationAverageErrors = [];
+    
+    % Each row represents an iteration
+    % Each colums represents the error for a given fold in the iteration
+    % Average all folds of a given iteration
+    % Then average all iterations
+    
+    for averageErrorPerFoldLoop = 1:DimensionsErrorMatrix(1)
+        curIterationErrorVector = ErrorMatrix(averageErrorPerFoldLoop,:);
+        DimensionsCurIterationErrorVector = size(curIterationErrorVector);
+        
+        ErrorSum = 0;
+        for innerLoop = 1:DimensionsCurIterationErrorVector(2)
+            ErrorSum = ErrorSum + curIterationErrorVector(1,innerLoop);
+        end
+        
+        AverageIterationError = ErrorSum / DimensionsCurIterationErrorVector(2);
+        IterationAverageErrors = [IterationAverageErrors AverageIterationError];
+    end
+    
+    % We now have a row vector containing the average error acrosds all folds
+    % for each iteration
+    DimensionsIterationAverageErrors = size(IterationAverageErrors);
+    
+    FinalAverageSum = 0;
+    for finalAverageLoop = 1:DimensionsIterationAverageErrors(2)
+        FinalAverageSum = FinalAverageSum + IterationAverageErrors(1,finalAverageLoop);
+    end
+    
+    average = FinalAverageSum / DimensionsIterationAverageErrors(2);
+end
+
+function standardDeviation = FindErrorStandardDeviationAcrossAllFolds(ErrorMatrix, AverageError)
+    DimensionsErrorMatrix = size(ErrorMatrix);
+    NumberElements = DimensionsErrorMatrix(1) * DimensionsErrorMatrix(2);
+    
+    StandardDeviationComponentSum = 0;
+    
+    for rowsLoop = 1:DimensionsErrorMatrix(1)
+        for columnsLoop = 1:DimensionsErrorMatrix(2)
+            CurErrorValue = ErrorMatrix(rowsLoop,columnsLoop);
+            CurDifferenceSquared = ((CurErrorValue - AverageError)^2);
+            StandardDeviationComponentSum = StandardDeviationComponentSum + CurDifferenceSquared;
+        end
+    end
+    
+    SquaredQuotient = StandardDeviationComponentSum / (NumberElements - 1);
+
+    standardDeviation = sqrt(SquaredQuotient);
+end
 
 function optimalKValue = findOptimalNumberNeighbors(StartingNumNeighbors, EndingNumNeighbors, NumFolds, ResponseVector, FeatureMatrix)
     Errors = [];
@@ -93,6 +189,17 @@ function optimalKValue = findOptimalNumberNeighbors(StartingNumNeighbors, Ending
         end
     end
     optimalKValue = lowestErrorNumNeighbors;
+end
+
+function errorVector = getAverageErrorForEachValueOfN(StartingNumNeighbors, EndingNumNeighbors, NumFolds, ResponseVector, FeatureMatrix)
+    Errors = [];
+    NumNeighbors = [];
+    for optimalNumNeighborsLoop = StartingNumNeighbors:EndingNumNeighbors
+        curError = KFoldCrossValidation(NumFolds, optimalNumNeighborsLoop, ResponseVector, FeatureMatrix);
+        Errors = [Errors curError];
+        NumNeighbors = [NumNeighbors optimalNumNeighborsLoop];
+    end
+    errorVector = Errors;
 end
 
 function error = KFoldCrossValidation(K, N, ResponseVector, OriginalFeatureMatrix)
@@ -159,6 +266,64 @@ function error = KFoldCrossValidation(K, N, ResponseVector, OriginalFeatureMatri
     error = FinalAverageError;
 end
 
+function errors = KFoldCrossValidation_Row(K, N, ResponseVector, OriginalFeatureMatrix)
+    % - We are going to split the samples into 10 even subsets
+    KCV_Subsets = getKEvenSubsetsRandom(K, ResponseVector, OriginalFeatureMatrix);
+    
+    Errors = [];
+
+    for testingLoop = 1:K
+
+        CurTrainingSubsetX = [];
+        CurTrainingSubsetY = [];
+
+        CurTestingSubsetX = [];
+        CurTestingSubsetY = [];
+
+        for innerLoop = 1:K
+            CurSubset = KCV_Subsets{1, innerLoop};
+            CurSubsetDimensions = size(CurSubset);
+            if innerLoop == testingLoop
+                for innerInnerLoop = 1:CurSubsetDimensions(1)
+                    curRow = CurSubset(innerInnerLoop,:);
+                    CurX = curRow(1,1:(end-1));
+                    CurY = curRow(1,end);
+                    CurTestingSubsetX = [CurTestingSubsetX; CurX];
+                    CurTestingSubsetY = [CurTestingSubsetY; CurY];
+                end
+            else
+                for innerInnerLoop = 1:CurSubsetDimensions(1)
+                    curRow = CurSubset(innerInnerLoop,:);
+                    CurX = curRow(1,1:(end-1));
+                    CurY = curRow(1,end);
+                    CurTrainingSubsetX = [CurTrainingSubsetX; CurX];
+                    CurTrainingSubsetY = [CurTrainingSubsetY; CurY];
+                end
+            end
+        end
+        
+        DimensionsTraining = size(CurTrainingSubsetX);
+        DimensionsTesting = size(CurTestingSubsetX);
+        
+        CurFoldPredictedResponses = predictSamples(N, CurTrainingSubsetX, CurTrainingSubsetY, CurTestingSubsetX);
+        
+        ErrorSum = 0;
+       
+        for accuracyLoop = 1:DimensionsTesting(1)
+            ActualResponse = CurTestingSubsetY(accuracyLoop,1);
+            PredictedResponse = CurFoldPredictedResponses(accuracyLoop,1);
+            curError = abs(PredictedResponse - ActualResponse);
+            ErrorSum = ErrorSum + curError;
+        end
+        
+        AverageError = ErrorSum / DimensionsTesting(1);
+        disp(AverageError);
+        Errors = [Errors AverageError];
+    end
+
+    errors = Errors;
+end
+
 function predictedResponses = predictSamples(K, TrainingFeatures, TrainingResponses, TestingFeatures)
 
     DimensionsTrainingFeatures = size(TrainingFeatures);
@@ -200,7 +365,7 @@ function predictedResponses = predictSamples(K, TrainingFeatures, TrainingRespon
         NormalizedTestingFeatureVector = [];
         
         for xNewNormLoop = 1:DimensionsTrainingFeatures(2)
-            curFeatureValue = TestingVector(testingFeatureLoop,xNewNormLoop);
+            curFeatureValue = TestingFeatures(testingFeatureLoop,xNewNormLoop);
 
             featureMinIndex = ((xNewNormLoop - 1) * 2) + 1;
             featureMaxIndex = ((xNewNormLoop - 1) * 2) + 2;

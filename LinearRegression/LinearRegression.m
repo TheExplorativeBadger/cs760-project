@@ -98,20 +98,41 @@ end
 
 %%% Run 10 sets of 10-Fold Cross Validation to Determine Error %%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-numIterations = 10;
+NumberIterations = 10;
 
-AverageErrors = [];
-for iterationLoop = 1:numIterations
-    AverageError = KFoldCrossValidation(10, y, X);
-    AverageErrors = [AverageErrors AverageError];
+% AverageErrors = [];
+% for iterationLoop = 1:NumberIterations
+%     AverageError = KFoldCrossValidation_Number(10, y, X);
+%     AverageErrors = [AverageErrors AverageError];
+% end
+
+% FinalAverageErrorSum = 0;
+% for finalAverageLoop = 1:NumberIterations
+%     FinalAverageErrorSum = FinalAverageErrorSum + AverageErrors(1,finalAverageLoop);
+% end
+% 
+% FinalAverageError = FinalAverageErrorSum / NumberIterations;
+
+
+% Each iteration expects a row vector with 10 columns, each representing
+% error of 1 fold (10 x 10 matrix)
+%[ I1F1 I1F2 I1F3 ...
+%  I2F1 I2F2 I3F3 ...
+% ...
+% ]
+iterationXfoldErrorMatrix = [];
+for iterationLoop = 1:NumberIterations
+    CurIterationErrors = KFoldCrossValidation_Row(10, y, X);
+    iterationXfoldErrorMatrix = [iterationXfoldErrorMatrix; CurIterationErrors];
 end
 
-FinalAverageErrorSum = 0;
-for finalAverageLoop = 1:numIterations
-    FinalAverageErrorSum = FinalAverageErrorSum + AverageErrors(1,finalAverageLoop);
-end
+FinalAverageError = FindAverageErrorAcrossAllFolds(iterationXfoldErrorMatrix);
+disp('Final Average Error:');
+disp(FinalAverageError);
 
-FinalAverageError = FinalAverageErrorSum / numIterations;
+FinalStandardDeviation = FindErrorStandardDeviationAcrossAllFolds(iterationXfoldErrorMatrix, FinalAverageError);
+disp('Standard Deviation:');
+disp(FinalStandardDeviation);
 
 %%% Clear Unwanted Variables %%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -122,13 +143,133 @@ clear Num_Rows_X;
 clear Num_Columns_X;
 clear significanceLoop;
 clear curSignificanceLevel;
+clear NumberIterations;
 clear iterationLoop;
-clear finalAverageLoop;
-clear FinalAverageErrorSum;
+clear CurIterationErrors;
+% clear finalAverageLoop;
+% clear FinalAverageErrorSum;
 
 %%% Extra Helper Functions %%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-function error = KFoldCrossValidation(K, ResponseVector, OriginalFeatureMatrix)
+
+function average = FindAverageErrorAcrossAllFolds(ErrorMatrix)
+    DimensionsErrorMatrix = size(ErrorMatrix);
+    IterationAverageErrors = [];
+    
+    % Each row represents an iteration
+    % Each colums represents the error for a given fold in the iteration
+    % Average all folds of a given iteration
+    % Then average all iterations
+    
+    for averageErrorPerFoldLoop = 1:DimensionsErrorMatrix(1)
+        curIterationErrorVector = ErrorMatrix(averageErrorPerFoldLoop,:);
+        DimensionsCurIterationErrorVector = size(curIterationErrorVector);
+        
+        ErrorSum = 0;
+        for innerLoop = 1:DimensionsCurIterationErrorVector(2)
+            ErrorSum = ErrorSum + curIterationErrorVector(1,innerLoop);
+        end
+        
+        AverageIterationError = ErrorSum / DimensionsCurIterationErrorVector(2);
+        IterationAverageErrors = [IterationAverageErrors AverageIterationError];
+    end
+    
+    % We now have a row vector containing the average error acrosds all folds
+    % for each iteration
+    DimensionsIterationAverageErrors = size(IterationAverageErrors);
+    
+    FinalAverageSum = 0;
+    for finalAverageLoop = 1:DimensionsIterationAverageErrors(2)
+        FinalAverageSum = FinalAverageSum + IterationAverageErrors(1,finalAverageLoop);
+    end
+    
+    average = FinalAverageSum / DimensionsIterationAverageErrors(2);
+end
+
+function standardDeviation = FindErrorStandardDeviationAcrossAllFolds(ErrorMatrix, AverageError)
+    DimensionsErrorMatrix = size(ErrorMatrix);
+    NumberElements = DimensionsErrorMatrix(1) * DimensionsErrorMatrix(2);
+    
+    StandardDeviationComponentSum = 0;
+    
+    for rowsLoop = 1:DimensionsErrorMatrix(1)
+        for columnsLoop = 1:DimensionsErrorMatrix(2)
+            CurErrorValue = ErrorMatrix(rowsLoop,columnsLoop);
+            CurDifferenceSquared = ((CurErrorValue - AverageError)^2);
+            StandardDeviationComponentSum = StandardDeviationComponentSum + CurDifferenceSquared;
+        end
+    end
+    
+    SquaredQuotient = StandardDeviationComponentSum / (NumberElements - 1);
+
+    standardDeviation = sqrt(SquaredQuotient);
+end
+
+function errors = KFoldCrossValidation_Row(K, ResponseVector, OriginalFeatureMatrix)
+    % - We are going to split the samples into 10 even subsets
+    KCV_Subsets = getKEvenSubsetsRandom(K, ResponseVector, OriginalFeatureMatrix);
+
+    Errors = [];
+
+    for testingLoop = 1:K
+
+        CurTrainingSubsetX = [];
+        CurTrainingSubsetY = [];
+
+        CurTestingSubsetX = [];
+        CurTestingSubsetY = [];
+
+        for innerLoop = 1:K
+            CurSubset = KCV_Subsets{1, innerLoop};
+            CurSubsetDimensions = size(CurSubset);
+            if innerLoop == testingLoop
+                for innerInnerLoop = 1:CurSubsetDimensions(1)
+                    curRow = CurSubset(innerInnerLoop,:);
+                    CurX = curRow(1,1:(end-1));
+                    CurY = curRow(1,end);
+                    CurTestingSubsetX = [CurTestingSubsetX; CurX];
+                    CurTestingSubsetY = [CurTestingSubsetY; CurY];
+                end
+            else
+                for innerInnerLoop = 1:CurSubsetDimensions(1)
+                    curRow = CurSubset(innerInnerLoop,:);
+                    CurX = curRow(1,1:(end-1));
+                    CurY = curRow(1,end);
+                    CurTrainingSubsetX = [CurTrainingSubsetX; CurX];
+                    CurTrainingSubsetY = [CurTrainingSubsetY; CurY];
+                end
+            end
+        end
+
+        % We now have a clearly defined matrix of testing and training
+        % samples, and their corresponding Responses
+
+        DimensionsTraining = size(CurTrainingSubsetX);
+        DimensionsTesting = size(CurTestingSubsetX);
+
+        Theta_Hat = inv(CurTrainingSubsetX' * CurTrainingSubsetX) * CurTrainingSubsetX' * CurTrainingSubsetY;
+
+        ErrorSum = 0;
+
+        for accuracyLoop = 1:DimensionsTesting
+            curTestingSample = CurTestingSubsetX(accuracyLoop,:);
+            curTestingResponse = CurTestingSubsetY(accuracyLoop,1);
+
+            curTestingSampleResponsePrediction = curTestingSample * Theta_Hat;
+
+            curError = abs(curTestingSampleResponsePrediction - curTestingResponse);
+            ErrorSum = ErrorSum + curError;
+        end
+
+        AverageError = ErrorSum / DimensionsTesting(1);
+        disp(AverageError);
+        Errors = [Errors AverageError];
+    end
+
+    errors = Errors;
+end
+
+function error = KFoldCrossValidation_Number(K, ResponseVector, OriginalFeatureMatrix)
     % - We are going to split the samples into 10 even subsets
     KCV_Subsets = getKEvenSubsetsRandom(K, ResponseVector, OriginalFeatureMatrix);
 
