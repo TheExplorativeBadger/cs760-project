@@ -22,7 +22,7 @@ The program requires 4 files to work:
     
     
 After processing these files, the program will produce a number of intermediary files, as well as one named
-* FinalCombinedFeaturesWithSeverity.csv
+* FinalCombinedFeaturesWithSeverity.csv 
 
 This file will be what gets carried on to the other steps of our project to perform various ML algorithms on it. Think of this file
 as the equivalent of what we begin with when looking at the Titanic Data sets.

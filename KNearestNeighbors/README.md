@@ -1,6 +1,6 @@
 # K-Nearest Neighbors
 
-A Matlab script containing an implementation of Euclidean distance weighted K-Nearest Neighbors to predict COVID severity indices for counties in the United States.
+A Matlab script containing an implementation of Euclidean distance weighted K-Nearest Neighbors to predict COVID severity indices for counties in the United States. 
 Currently uses 10 iterations of 10-Fold Cross Validation; however this number can be easily changed via a variable within the script if you wish to use a different number of iterations or folds.
 
 ##Steps:

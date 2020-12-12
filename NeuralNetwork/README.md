@@ -1,6 +1,6 @@
 # Neural Network
 
-Requires Python 3 to run, as well as the Numpy, Tensorflow, and Sklearn modules.
+Requires Python 3 to run, as well as the Numpy, Tensorflow, and Sklearn modules. 
 
 To Run:
 1. Create a FinalCombinedFeaturesWithSeverity.csv file using cs760-project/RawDataToUsableDataConverter.

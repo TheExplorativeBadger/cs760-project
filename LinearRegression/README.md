@@ -1,6 +1,6 @@
 # Linear Regression
 
-A Matlab script containing an implementation of standard Linear Regression with augmented 1-Bias feature vectors to predict COVID severity indices for counties in the United States.
+A Matlab script containing an implementation of standard Linear Regression with augmented 1-Bias feature vectors to predict COVID severity indices for counties in the United States. 
 
 ##Steps:
 
