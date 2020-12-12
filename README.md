@@ -9,7 +9,7 @@ A repository to store code related to the CS760 ML Final Project that Jason, Sam
     * A matlab program implementing K-Nearest neighbors on the data set produced from the RawDataToUsableDataConverter. Some misc. files in this directory as well as the /resources directory are needed for matlab's integration with Git, so please ignore them and do not remove them.
 
 3. LinearRegression
-   * A matlab program implementing Linear Regression on the data set produced from the RawDataToUsableDataConverter. This Linear Regression implementation uses a homoskedastic model. Some misc. files in this directory as well as the /resources directory are needed for matlab's integration with Git, so please ignore them and do not remove them.
+   * A matlab program implementing Linear Regression on the data set produced from the RawDataToUsableDataConverter. This Linear Regression implementation uses a homoskedastic model; however there are heteroskedastic implementations commented out (would still need editing) if you wish to expand on the homoskedastic implementation. Some misc. files in this directory as well as the /resources directory are needed for matlab's integration with Git, so please ignore them and do not remove them.
 
 4. NeuralNetwork
     * A python program that trains a shallow fully connected feed-forward neural network as a regression predictor. Implemented using Tensorflow and the Adaptive Moment (Adam) Optimizer with lasso regularization and mean-squared error as cost metrics.
