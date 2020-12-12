@@ -1,5 +1,9 @@
 # cs760-project
-A repository to store code related to the CS760 ML Final Project that Jason, Samantha, and I are working on.
+A repository to store code related to the CS760 ML Final Project that Jason, Samantha, and I wrote to explore the effects of a county's political affiliation and socioeconomic demographics on the severity of COVID-19 in the county.
+
+## Question
+
+Does political affiliation or population demographics have an effect on the severity ofCOVID-19 within a county?
 
 ## Sub-Directories
 1. DecisionTreeRegression
