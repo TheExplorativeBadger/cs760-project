@@ -3,7 +3,7 @@ A repository to store code related to the CS760 ML Final Project that Jason, Sam
 
 ## Sub-Directories
 1. DecisionTreeRegression
-    *
+    * A Mathematica Notebook containing an implementation of a binary decision tree with linear regression to predict COVID severity indices for counties in the United States.
 
 2. KNearestNeighbors
     * A matlab program implementing K-Nearest neighbors on the data set produced from the RawDataToUsableDataConverter. Some misc. files in this directory as well as the /resources directory are needed for matlab's integration with Git, so please ignore them and do not remove them.
@@ -20,4 +20,4 @@ that is properly formatted, contains only the features we are interested in, map
 to a final severity index, and is ready to use in further ML analysis
 
 6. SeverityIndexVisualization
-    *
+    * A Mathematica Notebook containing code used for the visualizations of the COVID severity index found in Appendix B.
