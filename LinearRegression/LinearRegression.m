@@ -100,20 +100,6 @@ end
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 NumberIterations = 10;
 
-% AverageErrors = [];
-% for iterationLoop = 1:NumberIterations
-%     AverageError = KFoldCrossValidation_Number(10, y, X);
-%     AverageErrors = [AverageErrors AverageError];
-% end
-
-% FinalAverageErrorSum = 0;
-% for finalAverageLoop = 1:NumberIterations
-%     FinalAverageErrorSum = FinalAverageErrorSum + AverageErrors(1,finalAverageLoop);
-% end
-% 
-% FinalAverageError = FinalAverageErrorSum / NumberIterations;
-
-
 % Each iteration expects a row vector with 10 columns, each representing
 % error of 1 fold (10 x 10 matrix)
 %[ I1F1 I1F2 I1F3 ...

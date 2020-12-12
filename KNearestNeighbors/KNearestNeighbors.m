@@ -18,9 +18,6 @@ StartingNumNeighbors = 1;
 EndingNumNeighbors = 25;
 NumberFolds = 10;
 
-% OptimalNumNeighbors = findOptimalNumberNeighbors(StartingNumNeighbors, EndingNumNeighbors, NumberFolds, y, X);
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 NumberNeighbors = [];
 for numNeighborsLoop = StartingNumNeighbors:EndingNumNeighbors
     NumberNeighbors = [NumberNeighbors numNeighborsLoop];
@@ -41,25 +38,10 @@ end
 OptimalNumNeighbors = lowestErrorNumNeighbors;
 disp('Found the Optimal Number of Neighbors to be:');
 disp(OptimalNumNeighbors);
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-
 
 %%% Use the Optimal K (K-NN) Value to Perform 10-Fold Cross Validation %%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 NumberIterations = 10;
-
-% AverageErrorPerFold = [];
-% for iterationLoop = 1:NumberIterations
-%     AverageError = KFoldCrossValidation(NumberFolds, OptimalNumNeighbors, y, X);
-%     AverageErrorPerFold = [AverageErrorPerFold AverageError];
-% end
-% 
-% FinalAverageErrorSum = 0;
-% for finalAverageLoop = 1:NumberIterations
-%     FinalAverageErrorSum = FinalAverageErrorSum + AverageErrorPerFold(1,finalAverageLoop);
-% end
-% 
-% FinalAverageError = FinalAverageErrorSum / NumberIterations;
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 disp('Starting 10 Iterations of 10-Fold Cross Validation Using Optimal Number of Neighbors');
